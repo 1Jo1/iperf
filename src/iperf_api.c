@@ -4477,6 +4477,7 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
 	sp->snd = diskfile_send;
 	sp->rcv2 = sp->rcv;
 	sp->rcv = diskfile_recv;
+	printf("rcv=diskfile_recv\n");
     } else
         sp->diskfile_fd = -1;
 
