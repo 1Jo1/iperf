@@ -1930,6 +1930,7 @@ iperf_check_total_rate(struct iperf_test *test, iperf_size_t last_interval_bytes
     }
 }
 
+//Todo multisend = 10
 int
 iperf_send_mt(struct iperf_stream *sp)
 {
@@ -1946,6 +1947,12 @@ iperf_send_mt(struct iperf_stream *sp)
     else
         multisend = 1;	/* nope */
 
+
+    //multisend = 10
+    //burst == 0
+    //rate ==  0
+    // printf("test->settings->rate: %lu\n", test->settings->rate);
+    
     /* Should bitrate throttle be checked for every send */
     no_throttle_check = test->settings->rate != 0 && test->settings->burst == 0;
 
@@ -1954,6 +1961,12 @@ iperf_send_mt(struct iperf_stream *sp)
 	    iperf_time_now(&now);
 	streams_active = 0;
 	{
+	    if (!sp->green_light) {
+		printf("sender->green_light < 0\n");
+	    }
+	    if (!sp->sender) {
+		printf("sender->sender < 0\n");
+	    }
 	    if (sp->green_light && sp->sender) {
                 // XXX If we hit one of these ending conditions maybe
                 // want to stop even trying to send something?
@@ -1967,6 +1980,7 @@ iperf_send_mt(struct iperf_stream *sp)
 		    i_errno = IESTREAMWRITE;
 		    return r;
 		}
+		// printf("multisend %d\n", multisend);
 		streams_active = 1;
 		test->bytes_sent += r;
 		if (!sp->pending_size)
@@ -1986,6 +2000,8 @@ iperf_send_mt(struct iperf_stream *sp)
     return 0;
 }
 
+
+//core function to call iperf_recv_tcp_recv
 int
 iperf_recv_mt(struct iperf_stream *sp)
 {
@@ -2984,6 +3000,8 @@ iperf_defaults(struct iperf_test *testp)
     if (!tcp)
         return -1;
 
+
+    //Todo set accept,send, listen, recv
     tcp->id = Ptcp;
     tcp->name = "TCP";
     tcp->accept = iperf_tcp_accept;

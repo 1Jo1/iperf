@@ -43,6 +43,8 @@
 #include "iperf_tcp.h"
 #include "net.h"
 #include "cjson.h"
+#include <execinfo.h>
+
 
 #if defined(HAVE_FLOWLABEL)
 #include "flowlabel.h"
@@ -57,6 +59,9 @@ iperf_tcp_recv(struct iperf_stream *sp)
 {
     int r;
 
+
+    //Todo #define DEFAULT_TCP_BLKSIZE (128 * 1024) default size 
+    //printf("blfksize: %d\n", sp->settings->blksize);
     r = Nread(sp->socket, sp->buffer, sp->settings->blksize, Ptcp);
 
     if (r < 0)
@@ -76,13 +81,40 @@ iperf_tcp_recv(struct iperf_stream *sp)
 }
 
 
+void print_stack_trace() {
+    // Size of the buffer to store the stack addresses
+    const int max_frames = 128;
+    void *buffer[max_frames];
+
+    // Capture the backtrace
+    int frame_count = backtrace(buffer, max_frames);
+
+    // Translate the addresses into an array of strings
+    char **symbols = backtrace_symbols(buffer, frame_count);
+    if (symbols == NULL) {
+        perror("backtrace_symbols");
+        exit(EXIT_FAILURE);
+    }
+
+    // Print the stack trace
+    printf("Stack trace:\n");
+    for (int i = 0; i < frame_count; i++) {
+        printf("%s\n", symbols[i]);
+    }
+
+    // Free the memory allocated for the symbols
+    free(symbols);
+}
+
 /* iperf_tcp_send
  *
  * sends the data for TCP
  */
+//Todo handles sent
 int
 iperf_tcp_send(struct iperf_stream *sp)
 {
+    //print_stack_trace();
     int r;
 
     if (!sp->pending_size)
@@ -90,9 +122,12 @@ iperf_tcp_send(struct iperf_stream *sp)
 
     if (sp->test->zerocopy)
 	r = Nsendfile(sp->buffer_fd, sp->socket, sp->buffer, sp->pending_size);
-    else
+    else {
 	r = Nwrite(sp->socket, sp->buffer, sp->pending_size, Ptcp);
 
+	//printf("write packet size: %d\n", sp->pending_size);
+
+    }
     if (r < 0)
         return r;
 

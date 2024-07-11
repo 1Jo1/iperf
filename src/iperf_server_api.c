@@ -64,6 +64,8 @@
 #endif /* TCP_CA_NAME_MAX */
 #endif /* HAVE_TCP_CONGESTION */
 
+
+// Todo worker run
 void *
 iperf_server_worker_run(void *s) {
     struct iperf_stream *sp = (struct iperf_stream *) s;
@@ -131,6 +133,8 @@ iperf_server_listen(struct iperf_test *test)
     return 0;
 }
 
+
+// Todo accept
 int
 iperf_accept(struct iperf_test *test)
 {
@@ -147,6 +151,7 @@ iperf_accept(struct iperf_test *test)
     }
 
     if (test->ctrl_sck == -1) {
+	printf("new client!\n");
         /* Server free, accept new client */
         test->ctrl_sck = s;
         // set TCP_NODELAY for lower latency on control messages
@@ -157,6 +162,7 @@ iperf_accept(struct iperf_test *test)
         }
 
 #if defined(HAVE_TCP_USER_TIMEOUT)
+	printf("USER_TIMEOUT\n");
         int opt;
         if ((opt = test->settings->snd_timeout)) {
             if (setsockopt(s, IPPROTO_TCP, TCP_USER_TIMEOUT, &opt, sizeof(opt)) < 0) {
@@ -873,7 +879,11 @@ iperf_run_server(struct iperf_test *test)
                         cleanup_server(test);
                     };
 
+		    int counter = 0;
+		    //Todo start pthread
                     SLIST_FOREACH(sp, &test->streams, streams) {
+			printf("server thread counter: %d", counter);
+			counter++;
                         if (pthread_create(&(sp->thr), &attr, &iperf_server_worker_run, sp) != 0) {
                             i_errno = IEPTHREADCREATE;
                             cleanup_server(test);

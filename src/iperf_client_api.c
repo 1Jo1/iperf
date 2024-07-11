@@ -51,6 +51,8 @@
 #endif /* TCP_CA_NAME_MAX */
 #endif /* HAVE_TCP_CONGESTION */
 
+
+//Tod client worker run
 void *
 iperf_client_worker_run(void *s) {
     struct iperf_stream *sp = (struct iperf_stream *) s;
@@ -678,7 +680,10 @@ iperf_run_client(struct iperf_test * test)
                     goto cleanup_and_fail;
                 }
 
+		int counter = 0;
                 SLIST_FOREACH(sp, &test->streams, streams) {
+		    printf("client connection %d \n", counter);
+		    counter++;
                     if (pthread_create(&(sp->thr), &attr, &iperf_client_worker_run, sp) != 0) {
                         i_errno = IEPTHREADCREATE;
                         goto cleanup_and_fail;

@@ -371,6 +371,8 @@ netannounce(int domain, int proto, const char *local, const char *bind_dev, int 
 /* reads 'count' bytes from a socket  */
 /********************************************************************/
 
+
+//Todo core read logic, check if first fd
 int
 Nread(int fd, char *buf, size_t count, int prot)
 {
