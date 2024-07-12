@@ -75,6 +75,26 @@ static int nread_overall_timeout = 30;
  */
 extern int gerror;
 
+void print_sockaddr(const struct sockaddr *sa) {
+    if (sa->sa_family == AF_INET) {
+        // Cast to IPv4 address structure
+        struct sockaddr_in *addr_in = (struct sockaddr_in *)sa;
+        char ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &(addr_in->sin_addr), ip, INET_ADDRSTRLEN);
+        printf("IPv4 address: %s\n", ip);
+        printf("Port: %d\n", ntohs(addr_in->sin_port));
+    } else if (sa->sa_family == AF_INET6) {
+        // Cast to IPv6 address structure
+        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)sa;
+        char ip[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &(addr_in6->sin6_addr), ip, INET6_ADDRSTRLEN);
+        printf("IPv6 address: %s\n", ip);
+        printf("Port: %d\n", ntohs(addr_in6->sin6_port));
+    } else {
+        printf("Unknown address family\n");
+    }
+}
+
 /*
  * timeout_connect adapted from netcat, via OpenBSD and FreeBSD
  * Copyright (c) 2001 Eric Jackson <ericj@monkey.org>
@@ -83,6 +103,8 @@ int
 timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
     int timeout)
 {
+	printf("timeout_connect\n");
+	    print_sockaddr(name);
 	struct pollfd pfd;
 	socklen_t optlen;
 	int flags, optval;
@@ -90,12 +112,15 @@ timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
 
 	flags = 0;
 	if (timeout != -1) {
+		printf("timout -1\n");
 		flags = fcntl(s, F_GETFL, 0);
 		if (fcntl(s, F_SETFL, flags | O_NONBLOCK) == -1)
 			return -1;
 	}
 
+	
 	if ((ret = connect(s, name, namelen)) != 0 && errno == EINPROGRESS) {
+		printf("timeout_connect connect: %d\n", ret);
 		pfd.fd = s;
 		pfd.events = POLLOUT;
 		if ((ret = poll(&pfd, 1, timeout)) == 1) {
@@ -111,6 +136,9 @@ timeout_connect(int s, const struct sockaddr *name, socklen_t namelen,
 		} else
 			ret = -1;
 	}
+
+	printf("after timeout_connect connect: %d error: %d\n", ret, errno);
+
 
 	if (timeout != -1 && fcntl(s, F_SETFL, flags) == -1)
 		ret = -1;
@@ -232,10 +260,12 @@ create_socket(int domain, int proto, const char *local, const char *bind_dev, in
     return s;
 }
 
+// Todo check server connection
 /* make connection to server */
 int
 netdial(int domain, int proto, const char *local, const char *bind_dev, int local_port, const char *server, int port, int timeout)
 {
+    printf("netdial\n");
     struct addrinfo *server_res = NULL;
     int s, saved_errno;
 

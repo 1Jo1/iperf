@@ -385,6 +385,7 @@ iperf_handle_message_client(struct iperf_test *test)
 int
 iperf_connect(struct iperf_test *test)
 {
+    printf("iperf_connect\n");
     int opt;
     socklen_t len;
 
@@ -398,6 +399,7 @@ iperf_connect(struct iperf_test *test)
 
     make_cookie(test->cookie);
 
+    printf("before control plane check\n");
     /* Create and connect the control channel */
     if (test->ctrl_sck < 0)
 	// Create the control channel using an ephemeral port
@@ -406,6 +408,8 @@ iperf_connect(struct iperf_test *test)
         i_errno = IECONNECT;
         return -1;
     }
+
+    printf("after control plane check\n");
 
     // set TCP_NODELAY for lower latency on control messages
     int flag = 1;

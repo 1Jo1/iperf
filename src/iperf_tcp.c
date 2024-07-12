@@ -64,6 +64,7 @@ iperf_tcp_recv(struct iperf_stream *sp)
     //printf("blfksize: %d\n", sp->settings->blksize);
     r = Nread(sp->socket, sp->buffer, sp->settings->blksize, Ptcp);
 
+    //printf("client socket: %d\n", sp->socket);
     if (r < 0)
         return r;
 
@@ -142,6 +143,17 @@ iperf_tcp_send(struct iperf_stream *sp)
     return r;
 }
 
+// Function to print the status of a socket option
+void print_socket_option(int sockfd, int level, int optname, const char *optname_str) {
+    int optval;
+    socklen_t optlen = sizeof(optval);
+
+    if (getsockopt(sockfd, level, optname, &optval, &optlen) == 0) {
+        printf("%s: %s\n", optname_str, (optval ? "ON" : "OFF"));
+    } else {
+        perror(optname_str);
+    }
+}
 
 /* iperf_tcp_accept
  *
@@ -157,10 +169,59 @@ iperf_tcp_accept(struct iperf_test * test)
     struct sockaddr_storage addr;
 
     len = sizeof(addr);
+
+     // Array of socket options to check
+    struct {
+        int level;
+        int optname;
+        const char *optname_str;
+    } socket_options[] = {
+        {SOL_SOCKET, SO_DEBUG, "SO_DEBUG"},
+        {SOL_SOCKET, SO_REUSEADDR, "SO_REUSEADDR"},
+        {SOL_SOCKET, SO_TYPE, "SO_TYPE"},
+        {SOL_SOCKET, SO_ERROR, "SO_ERROR"},
+        {SOL_SOCKET, SO_DONTROUTE, "SO_DONTROUTE"},
+        {SOL_SOCKET, SO_BROADCAST, "SO_BROADCAST"},
+        {SOL_SOCKET, SO_SNDBUF, "SO_SNDBUF"},
+        {SOL_SOCKET, SO_RCVBUF, "SO_RCVBUF"},
+        {SOL_SOCKET, SO_KEEPALIVE, "SO_KEEPALIVE"},
+        {SOL_SOCKET, SO_OOBINLINE, "SO_OOBINLINE"},
+        {SOL_SOCKET, SO_LINGER, "SO_LINGER"},
+        {SOL_SOCKET, SO_RCVLOWAT, "SO_RCVLOWAT"},
+        {SOL_SOCKET, SO_SNDLOWAT, "SO_SNDLOWAT"},
+        {SOL_SOCKET, SO_RCVTIMEO, "SO_RCVTIMEO"},
+        {SOL_SOCKET, SO_SNDTIMEO, "SO_SNDTIMEO"},
+        {SOL_SOCKET, SO_ACCEPTCONN, "SO_ACCEPTCONN"},
+        {SOL_SOCKET, SO_REUSEPORT, "SO_REUSEPORT"},
+        {SOL_SOCKET, SO_TIMESTAMP, "SO_TIMESTAMP"},
+        {SOL_SOCKET, SO_BINDTODEVICE, "SO_BINDTODEVICE"},
+        {IPPROTO_TCP, TCP_NODELAY, "TCP_NODELAY"},
+        {IPPROTO_TCP, TCP_MAXSEG, "TCP_MAXSEG"},
+        {IPPROTO_TCP, TCP_CORK, "TCP_CORK"},
+        {IPPROTO_TCP, TCP_KEEPIDLE, "TCP_KEEPIDLE"},
+        {IPPROTO_TCP, TCP_KEEPINTVL, "TCP_KEEPINTVL"},
+        {IPPROTO_TCP, TCP_KEEPCNT, "TCP_KEEPCNT"},
+        {IPPROTO_TCP, TCP_SYNCNT, "TCP_SYNCNT"},
+        {IPPROTO_TCP, TCP_LINGER2, "TCP_LINGER2"},
+        {IPPROTO_TCP, TCP_DEFER_ACCEPT, "TCP_DEFER_ACCEPT"},
+        {IPPROTO_TCP, TCP_WINDOW_CLAMP, "TCP_WINDOW_CLAMP"},
+        {IPPROTO_TCP, TCP_INFO, "TCP_INFO"},
+        {IPPROTO_TCP, TCP_QUICKACK, "TCP_QUICKACK"}
+    };
+
+            // Number of socket options to check
+    int num_options = sizeof(socket_options) / sizeof(socket_options[0]);
+
+    // Print the status of each socket option
+    for (int i = 0; i < num_options; i++) {
+        print_socket_option(test->listener, socket_options[i].level, socket_options[i].optname, socket_options[i].optname_str);
+    }
+
     if ((s = accept(test->listener, (struct sockaddr *) &addr, &len)) < 0) {
         i_errno = IESTREAMCONNECT;
         return -1;
     }
+
 #if defined(HAVE_SO_MAX_PACING_RATE)
     /* If fq socket pacing is specified, enable it. */
 
@@ -409,12 +470,15 @@ iperf_tcp_listen(struct iperf_test *test)
 int
 iperf_tcp_connect(struct iperf_test *test)
 {
+
+    printf("iperf_tcp_connect\n");
     struct addrinfo *server_res;
     int s, opt;
     socklen_t optlen;
     int saved_errno;
     int rcvbuf_actual, sndbuf_actual;
 
+    printf("connect bind-address: %s\n", test->server_hostname);
     s = create_socket(test->settings->domain, SOCK_STREAM, test->bind_address, test->bind_dev, test->bind_port, test->server_hostname, test->server_port, &server_res);
     if (s < 0) {
 	i_errno = IESTREAMCONNECT;
@@ -599,7 +663,9 @@ iperf_tcp_connect(struct iperf_test *test)
     /* Set common socket options */
     iperf_common_sockopts(test, s);
 
+    printf("before connect\n");
     if (connect(s, (struct sockaddr *) server_res->ai_addr, server_res->ai_addrlen) < 0 && errno != EINPROGRESS) {
+	printf("connect error %d\n", errno);
 	saved_errno = errno;
 	close(s);
 	freeaddrinfo(server_res);
@@ -608,6 +674,7 @@ iperf_tcp_connect(struct iperf_test *test)
         return -1;
     }
 
+    printf("after connect\n");
     freeaddrinfo(server_res);
 
     /* Send cookie for verification */
